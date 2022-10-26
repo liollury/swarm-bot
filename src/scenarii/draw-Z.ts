@@ -1,3 +1,4 @@
+import { Vector } from '../vector';
 import { DrawSimulation } from './draw';
 
 export class DrawZSimulation extends DrawSimulation {
@@ -10,4 +11,7 @@ export class DrawZSimulation extends DrawSimulation {
     [0, 1, 0, 0, 0, 0, 0],
     [1, 1, 1, 1, 1, 1, 1]
   ];
+
+  startPosition: Vector = new Vector(300, 300);
+
 }

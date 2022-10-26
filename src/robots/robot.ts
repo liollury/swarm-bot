@@ -1,3 +1,4 @@
+import Matter, { Bodies, Body, IBodyDefinition, Vector as MatterVector } from 'matter-js';
 import type { NearInformation } from '../near-information';
 import { Vector } from '../vector';
 import type { World } from '../world';
@@ -9,41 +10,51 @@ export class Robot {
   color = '#ee2222';
   data: any = {};
   debugVector: Vector;
+  private _body: Body;
+  velocityVector: Vector;
 
   constructor(
-    public x: number,
-    public y: number,
+    x: number,
+    y: number,
     public radius: number,
     public speed: number,
-    public detectionRadius: number
-  ) {}
+    public detectionRadius: number,
+    private options: IBodyDefinition = { render: { fillStyle: 'rgb(245 90 60)' } }
+  ) {
+    this.x = x;
+    this.y = y;
+  }
+
+  get body(): Body {
+    if (!this._body) {
+      this._body = Bodies.circle(0, 0, this.radius, this.options);
+      // this._body.friction = 0;
+      // this._body.frictionAir = 0;
+      this._body.restitution = 0.5;
+    }
+    return this._body;
+  }
+
+  set x(x: number) {
+    Matter.Body.setPosition(this.body, MatterVector.create(x, this.body.position.y));
+  }
+
+  set y(y: number) {
+    Matter.Body.setPosition(this.body, MatterVector.create(this.body.position.x, y));
+  }
+
+  get x(): number {
+    return this.body.position.x;
+  }
+
+  get y(): number {
+    return this.body.position.y;
+  }
 
   public tick() {
     throw new Error('Not implemented !');
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-    ctx.fillStyle = this.color;
-    ctx.fill();
-    if (this.debug) {
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.detectionRadius, 0, 2 * Math.PI);
-      ctx.strokeStyle = "#aaa";
-      ctx.stroke();
-      ctx.fillStyle = "#fff";
-      ctx.textAlign = 'center';
-      ctx.fillText(`${this.id}`, this.x, this.y + this.radius  / 4);
-      if (this.debugVector) {
-        ctx.beginPath();
-        ctx.moveTo(this.x, this.y);
-        ctx.lineTo(this.x + this.debugVector.x, this.y + this.debugVector.y);
-        ctx.strokeStyle = "#aaa";
-        ctx.stroke();
-      }
-    }
-  }
 
   getNearRobots(): NearInformation[] {
     return this.world.getNearRobots(this);
@@ -69,15 +80,17 @@ export class Robot {
   moveToVector(vector: Vector, maxDistance: number = Number.POSITIVE_INFINITY): Vector {
     let adjustedVector = vector;
     const distance = Math.min(this.speed, maxDistance);
-    if (vector.size > distance) {
-      adjustedVector = vector.scale(this.speed / vector.size);
+    if (vector.size !== distance) {
+      adjustedVector = vector.scale(distance / vector.size);
     }
-    [this.x, this.y] = [this.x + adjustedVector.x, this.y + adjustedVector.y];
+    this.velocityVector = new Vector(adjustedVector.x, adjustedVector.y);
     return vector.subtract(adjustedVector);
   }
 
   clone(): Robot {
-    return Object.assign(Object.create(Object.getPrototypeOf(this)), this);
+    const clone = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
+    clone._body = null;
+    return clone;
   }
 
   setData(data: any) {

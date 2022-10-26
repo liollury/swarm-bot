@@ -1,38 +1,44 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { DrawZenikaSimulation } from './scenarii/draw-zenika';
-	import { NearByNearSeekScanario } from './scenarii/near-by-near-seek';
-	import { Scenario } from './scenarii/scenario';
+  import { onMount } from 'svelte';
+  import { DrawBiteSimulation } from './scenarii/draw-bite';
+  import { DrawOllySimulation } from './scenarii/draw-olly';
+  import { DrawZSimulation } from './scenarii/draw-Z';
+  import { DrawZenikaSimulation } from './scenarii/draw-zenika';
+  import { ExpandedScenario } from './scenarii/expanded';
+  import { NearByNearSeekScanario } from './scenarii/near-by-near-seek';
+  import { NearSeekScenario } from './scenarii/near-seek';
 
-	let canvas;
-	let simulation: Scenario;
-	const width = 1500;
-	const height = 800;
-	onMount(() => {
-		canvas.width = width;
-		canvas.height = height;
-		const ctx = canvas.getContext('2d');
-		simulation = new NearByNearSeekScanario();
-		simulation.init(ctx, width, height);
-		simulation.start();
-	});
+  let simulation;
 
-	function tooglePlay() {
-		if (simulation.simulationActive) {
-			simulation.pause();
-		} else {
-			simulation.start();
-		}
-	}
+  onMount(() => {
+    // simulation = new ExpandedScenario();
+    // simulation = new NearByNearSeekScanario();
+    // simulation = new NearSeekScenario();
+    // simulation = new DrawZSimulation();
+    simulation = new DrawOllySimulation();
+    // simulation = new DrawZenikaSimulation();
+    // simulation = new DrawBiteSimulation();
+    simulation.init(1500, 800);
+    simulation.start();
+  });
+
+  function tooglePlay() {
+    if (simulation.simulationActive) {
+      simulation.pause();
+    } else {
+      simulation.start();
+    }
+  }
+
 </script>
 
 <main>
-	<canvas bind:this="{canvas}"></canvas>
-	<button on:click={tooglePlay}>Play / pause</button>
+
+    <button on:click={tooglePlay}>Play / pause</button>
 </main>
 
 <style>
-	canvas {
-		border: 1px solid black;
-	}
+    canvas {
+        border: 1px solid black;
+    }
 </style>

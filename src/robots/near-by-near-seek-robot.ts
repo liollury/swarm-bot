@@ -1,4 +1,5 @@
 import type { NearInformation } from '../near-information';
+import { Vector } from '../vector';
 import { Robot } from './robot';
 
 export class NearByNearSeekRobot extends Robot {
@@ -26,6 +27,8 @@ export class NearByNearSeekRobot extends Robot {
       });
       if (target.distance > this.detectionRadius - 20 && this.data.neighbours.length >= 12) {
         this.moveToVector(this.getVector(target.directionAngle, target.distance));
+      } else {
+        this.moveToVector(new Vector(0, 0));
       }
     } else if (nearRobotFoundTarget) {
       this.setData({
@@ -40,15 +43,15 @@ export class NearByNearSeekRobot extends Robot {
       });
       if (this.data.neighbours.length >= 12 || this.getNearest(nearRobotsWithoutTarget).distance > this.detectionRadius / 1.5) {
         this.moveToVector(this.getVector(nearRobotFoundTarget.directionAngle, nearRobotFoundTarget.distance));
+      } else {
+        this.moveToVector(new Vector(0, 0));
       }
     } else {
       this.setData({});
-      if (!this.lastDirection) {
-        this.lastDirection = Math.random() * 360;
-      } else if (nearWalls.length > 0 && this.getNearest(nearWalls).distance < (this.detectionRadius / 2)) {
-        this.lastDirection = nearWalls[0].directionAngle - 180 + (90 * Math.random());
+      if (!this.velocityVector || (this.velocityVector.x === 0 && this.velocityVector.y === 0)) {
+        this.moveToVector(this.getVector(Math.random() * 360));
       }
-      this.moveToVector(this.getVector(this.lastDirection));
+      this.moveToVector(this.velocityVector);
     }
   }
 

@@ -24,4 +24,5 @@ export class DrawBiteSimulation extends DrawSimulation {
     [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
     [0, 0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0]
   ];
+  startPosition: Vector = new Vector(300, 300);
 }

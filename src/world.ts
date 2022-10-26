@@ -1,35 +1,81 @@
+import Matter, {
+  Composite,
+  Engine,
+  IChamferableBodyDefinition,
+  Render,
+  Runner,
+  Vector as MatterVector
+} from 'matter-js';
 import type { NearInformation } from './near-information';
+import { ExpandedRobot } from './robots/expanded-robot';
 import type { Robot } from './robots/robot';
 import { Vector } from './vector';
 
 export class World {
   speed: number;
-  robots: Robot[];
+  robots: Robot[] = [];
   ctx: CanvasRenderingContext2D;
   timer;
   simulationActive = false;
+  engine: Engine;
+  render: Render;
+  runner: Runner;
 
-  constructor(protected width: number, protected height: number) {}
+  constructor(protected width: number, protected height: number) {
+    // module aliases
+    const Engine = Matter.Engine,
+      Render = Matter.Render,
+      Runner = Matter.Runner,
+      Bodies = Matter.Bodies,
+      Composite = Matter.Composite;
 
+    // create an engine
+    this.engine = Engine.create();
+    this.engine.gravity.y = 0;
 
+    // create a renderer
+    this.render = Render.create({
+      element: document.body,
+      engine: this.engine,
+      options: {
+        width,
+        height,
+        wireframes: false
+      }
+    });
+    const wallOptions: IChamferableBodyDefinition = { isStatic: true, render: { fillStyle: 'white' } };
+    const wallWidth = 20;
+    const top = Bodies.rectangle(width / 2, 0, width, wallWidth, wallOptions);
+    const bottom = Bodies.rectangle(width / 2, height, width, wallWidth, wallOptions);
+    const left = Bodies.rectangle(0, height / 2, wallWidth, height, wallOptions);
+    const right = Bodies.rectangle(width, height / 2, wallWidth, height, wallOptions);
+
+    Composite.add(this.engine.world, [top, bottom, left, right]);
+    Render.run(this.render);
+    this.runner = Runner.create();
+  }
+
+  init() {
+    Composite.add(this.engine.world, this.robots.map((robot: Robot) => robot.body));
+  }
 
   startSimulation() {
     this.robots.forEach((robot: Robot) => robot.world = this);
-    this.timer = setInterval(this.tickSimulation.bind(this), 1000 / this.speed);
+    Matter.Events.on(this.runner, 'tick', () => {
+      this.robots.forEach((robot: Robot) => {
+        robot.velocityVector = new Vector(robot.body.velocity.x, robot.body.velocity.y);
+        robot.tick();
+        Matter.Body.setVelocity(robot.body, MatterVector.create(robot.velocityVector?.x || 0, robot.velocityVector?.y || 0));
+      });
+
+    });
+    Runner.run(this.runner, this.engine);
     this.simulationActive = true;
   }
 
   stopSimulation() {
-    clearTimeout(this.timer);
+    Runner.stop(this.runner);
     this.simulationActive = false;
-  }
-
-  tickSimulation() {
-    this.ctx.clearRect(0, 0, this.width, this.height);
-    this.robots.forEach((robot: Robot) => {
-      robot.tick();
-      requestAnimationFrame(robot.draw.bind(robot, this.ctx));
-    });
   }
 
   generateRobotsGrid(model: Robot, xCount: number, yCount: number, gapHorizontal: number, gapVertical: number) {
@@ -61,39 +107,6 @@ export class World {
       robot.id = i;
       this.robots.push(robot);
     }
-  }
-
-  getNearestRobotsInDirection(robot: Robot, vector: Vector): NearInformation {
-    const candidates = this.getNearRobotsInDirection(robot, vector);
-    if (candidates.length > 0) {
-      return candidates.reduce((prev: NearInformation, curr: NearInformation) => !prev || prev.distance > curr.distance ? curr : prev, null);
-    }
-  }
-
-  getNearRobotsInDirection(robot: Robot, vector: Vector): NearInformation[] {
-    const robotVector = new Vector(robot.x, robot.y);
-    return this.robots.filter((candidate: Robot) => {
-      if (candidate === robot) {
-        return false;
-      }
-      const candidateVector = new Vector(candidate.x, candidate.y);
-      let x1 = robotVector.subtract(candidateVector);
-      let x2 = robotVector.add(vector).subtract(candidateVector);
-      let dv = x2.subtract(x1);
-      let dr = dv.size;
-      let D = x1.x * x2.y - x2.x * x1.y;
-      // evaluate if there is an intersection
-      let di =  candidate.radius * candidate.radius * dr * dr - D * D;
-      if (di < 0.0) {
-        return false;
-      }
-      return true;
-    }).map((near: Robot) => ({
-      objectId: near.id,
-      directionAngle: Math.atan2(near.y - robot.y, near.x - robot.x) * (180 / Math.PI),
-      distance: Math.sqrt(Math.pow((near.x - robot.x), 2) + Math.pow((near.y - robot.y), 2) ) - near.radius / 2 - robot.radius / 2,
-      data: near.data
-    }));
   }
 
   getNearRobots(robot: Robot): NearInformation[] {

@@ -1,4 +1,5 @@
 import type { NearInformation } from '../near-information';
+import { Vector } from '../vector';
 import { Robot } from './robot';
 
 export class ExpandedRobot extends Robot {
@@ -12,14 +13,14 @@ export class ExpandedRobot extends Robot {
       if (nearestRobot.distance < this.detectionRadius - 1) {
         const oppositeAngle = nearestRobot.directionAngle - 180;
         this.moveToVector(this.getVector(oppositeAngle));
+      } else {
+        this.moveToVector(new Vector(0, 0));
       }
     } else {
-      if (!this.lastDirection) {
-        this.lastDirection = Math.random() * 360;
-      } else if (nearWall.length > 0) {
-        this.lastDirection = nearWall[0].directionAngle - 180 + (90 * Math.random());
+      if (!this.velocityVector || (this.velocityVector.x === 0 && this.velocityVector.y === 0)) {
+        this.moveToVector(this.getVector(Math.random() * 360));
       }
-      this.moveToVector(this.getVector(this.lastDirection));
+      this.moveToVector(this.velocityVector);
     }
   }
 }
