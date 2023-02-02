@@ -7,7 +7,7 @@ import { Scenario } from './scenario';
 export class NearByNearSeekScanario extends Scenario {
   init(width: number, height: number) {
     this.world = new World(width, height);
-    this.world.speed = 200;
+    this.world.speed = 1.5;
     // Seek and catch
     // world.generateRobotsGrid(new NearByNearSeekRobot(0, 0, 10, 1, 100), 6, 4, 20, 20);
     this.world.generateRobotsRandom(new NearByNearSeekRobot(0, 0, 10, 10, 100), 20, 600, 600);

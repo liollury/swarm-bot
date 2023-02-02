@@ -7,9 +7,7 @@ export class Robot {
   debug = false;
   world: World;
   id: number;
-  color = '#ee2222';
   data: any = {};
-  debugVector: Vector;
   private _body: Body;
   velocityVector: Vector;
 
@@ -19,7 +17,7 @@ export class Robot {
     public radius: number,
     public speed: number,
     public detectionRadius: number,
-    private options: IBodyDefinition = { render: { fillStyle: 'rgb(245 90 60)' } }
+    public options: IBodyDefinition = { render: { fillStyle: 'rgb(245 90 60)' } }
   ) {
     this.x = x;
     this.y = y;
@@ -51,7 +49,7 @@ export class Robot {
     return this.body.position.y;
   }
 
-  public tick() {
+  public tick(tickNumber?: number) {
     throw new Error('Not implemented !');
   }
 
@@ -75,7 +73,7 @@ export class Robot {
    * Move by the vector description with maximum movement length (minimum between robot speed and maxDistance)
    * @param vector movement vector
    * @param maxDistance maximum distance
-   * @return a new vector with corrected relative vector (original vector - traveled distance)
+   * @return a new vector with corrected relative vector traveled distance
    */
   moveToVector(vector: Vector, maxDistance: number = Number.POSITIVE_INFINITY): Vector {
     let adjustedVector = vector;
@@ -84,16 +82,40 @@ export class Robot {
       adjustedVector = vector.scale(distance / vector.size);
     }
     this.velocityVector = new Vector(adjustedVector.x, adjustedVector.y);
-    return vector.subtract(adjustedVector);
+    return adjustedVector;
   }
 
   clone(): Robot {
-    const clone = Object.assign(Object.create(Object.getPrototypeOf(this)), this);
-    clone._body = null;
-    return clone;
+    const body = this._body;
+    this._body = null;
+    const robot = Robot.clone<Robot>(this);
+    this._body = body;
+    return robot;
   }
+
+  static clone<T>(source: T): T {
+    return Array.isArray(source)
+      ? source.map(item => Robot.clone(item))
+      : source instanceof Date
+        ? new Date(source.getTime())
+        : source && typeof source === 'object'
+          ? Object.getOwnPropertyNames(source).reduce((o, prop) => {
+            Object.defineProperty(o, prop, Object.getOwnPropertyDescriptor(source, prop)!);
+            o[prop] = Robot.clone((source as { [key: string]: any })[prop]);
+            return o;
+          }, Object.create(Object.getPrototypeOf(source)))
+          : source as T;
+  }
+
 
   setData(data: any) {
     this.data = data;
+  }
+
+  mergeData(data: any) {
+    this.data = {
+      ...(this.data || {}),
+      ...data
+    };
   }
 }

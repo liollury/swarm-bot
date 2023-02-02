@@ -1,7 +1,7 @@
 import Matter, {
   Composite,
   Engine,
-  IChamferableBodyDefinition,
+  IChamferableBodyDefinition, IMouseEvent, MouseConstraint,
   Render,
   Runner,
   Vector as MatterVector
@@ -20,6 +20,10 @@ export class World {
   engine: Engine;
   render: Render;
   runner: Runner;
+  mouseConstraint: MouseConstraint;
+  selectedRobot: Robot;
+  selectedRobotListener: (robot: Robot) => {};
+  tickNumber = 0;
 
   constructor(protected width: number, protected height: number) {
     // module aliases
@@ -35,7 +39,7 @@ export class World {
 
     // create a renderer
     this.render = Render.create({
-      element: document.body,
+      element: document.querySelector('#simulation'),
       engine: this.engine,
       options: {
         width,
@@ -53,18 +57,28 @@ export class World {
     Composite.add(this.engine.world, [top, bottom, left, right]);
     Render.run(this.render);
     this.runner = Runner.create();
+
+    Matter.Events.on(this.engine, 'collisionStart', function(event) {
+      // console.log(event.pairs[0], event.pairs[1]);
+      // Now do something with the event and elements ... your task ;-)
+    });
   }
 
   init() {
     Composite.add(this.engine.world, this.robots.map((robot: Robot) => robot.body));
+    this.listenForClick();
   }
 
   startSimulation() {
     this.robots.forEach((robot: Robot) => robot.world = this);
     Matter.Events.on(this.runner, 'tick', () => {
+      this.tickNumber++;
       this.robots.forEach((robot: Robot) => {
+        if (this.selectedRobotListener && this.selectedRobot) {
+          this.selectedRobotListener(this.selectedRobot);
+        }
         robot.velocityVector = new Vector(robot.body.velocity.x, robot.body.velocity.y);
-        robot.tick();
+        robot.tick(this.tickNumber);
         Matter.Body.setVelocity(robot.body, MatterVector.create(robot.velocityVector?.x || 0, robot.velocityVector?.y || 0));
       });
 
@@ -76,6 +90,33 @@ export class World {
   stopSimulation() {
     Runner.stop(this.runner);
     this.simulationActive = false;
+  }
+
+  listenForClick() {
+    document.getElementsByTagName('canvas')[0].addEventListener('click', (event: MouseEvent) => {
+      if (this.selectedRobot) {
+        this.selectedRobot.body.render.fillStyle = this.selectedRobot.options.render.fillStyle;
+        this.selectedRobot = null;
+      }
+      const mousePosition = new Vector(event.offsetX, event.offsetY);
+      const robot = this.robots.find((robot: Robot) => {
+        return mousePosition.x > robot.x - robot.radius &&
+          mousePosition.x < robot.x + robot.radius &&
+          mousePosition.y > robot.y - robot.radius &&
+          mousePosition.y < robot.y + robot.radius;
+      });
+      if (robot) {
+        this.selectedRobot = robot;
+        this.selectedRobot.body.render.fillStyle = '#ff0000';
+        if (this.selectedRobotListener) {
+          this.selectedRobotListener(this.selectedRobot);
+        }
+      }
+    });
+  }
+
+  public listenForSelectedRobot(callback: (robot: Robot) => {}) {
+    this.selectedRobotListener = callback;
   }
 
   generateRobotsGrid(model: Robot, xCount: number, yCount: number, gapHorizontal: number, gapVertical: number) {
